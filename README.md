@@ -47,3 +47,4 @@ The project will be developed in different stages, starting with the C++ and DSA
 🚧 Currently under development.
 
 More features and improvements will be added as the project progresses.
+Local setup and testing on MacBook
