@@ -1,4 +1,4 @@
-#include "../include/Food.h"
+#include "../include/food.h"
 #include <iostream>
 #include <fstream>
 
@@ -14,11 +14,13 @@ Food::Food(int id, string name, string category, float price, bool available) {
 }
 
 void Food::display() {
-    cout << "ID: " << id << endl;
+    cout << "------------------------" << endl;
+    cout << "Food ID: " << id << endl;
     cout << "Name: " << name << endl;
     cout << "Category: " << category << endl;
     cout << "Price: Rs. " << price << endl;
     cout << "Available: " << (available ? "Yes" : "No") << endl;
+    cout << "------------------------" << endl;
 }
 
 FoodList::FoodList() {
