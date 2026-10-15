@@ -27,24 +27,45 @@ FoodList::FoodList() {
     head = nullptr;
 }
 
-void FoodList::addFood(int id, string name, string category, float price) {
+void FoodList::addFood(int id, string name, string category, float price)
+{
+    if (id <= 0)
+    {
+        cout << "Invalid food ID." << endl;
+        return;
+    }
+
+    if (price <= 0)
+    {
+        cout << "Price must be greater than zero." << endl;
+        return;
+    }
+
+    if (findFood(id) != nullptr)
+    {
+        cout << "Food ID already exists." << endl;
+        return;
+    }
 
     Food* newFood = new Food(id, name, category, price);
 
-    if (head == nullptr) {
+    if (head == nullptr)
+    {
         head = newFood;
-         saveToFile();
+        saveToFile();
         return;
     }
 
     Food* temp = head;
 
-    while (temp->next != nullptr) {
+    while (temp->next != nullptr)
+    {
         temp = temp->next;
     }
 
     temp->next = newFood;
-     saveToFile();
+
+    saveToFile();
 }
 
 void FoodList::displayMenu() {

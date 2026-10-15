@@ -1,5 +1,5 @@
-#include "../include/Cart.h"
-#include "../include/Food.h"
+#include "../include/cart.h"
+#include "../include/food.h"
 #include <iostream>
 
 using namespace std;
@@ -49,13 +49,20 @@ void Cart::addItem(FoodList& menu, int foodId, int quantity)
     while (temp != nullptr)
     {
         if (temp->foodId == foodId)
-        {
-            temp->quantity += quantity;
+{
+    int newQuantity = temp->quantity + quantity;
 
-            cout << "Quantity updated in cart." << endl;
+    if (newQuantity <= 0)
+    {
+        cout << "Invalid cart quantity." << endl;
+        return;
+    }
 
-            return;
-        }
+    temp->quantity = newQuantity;
+
+    cout << "Quantity updated in cart." << endl;
+    return;
+}
 
         temp = temp->next;
     }
