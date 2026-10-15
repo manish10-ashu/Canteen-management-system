@@ -1,4 +1,4 @@
-#include "../include/Customer.h"
+#include "../include/customer.h"
 #include <iostream>
 #include <fstream>
 
@@ -26,12 +26,30 @@ CustomerList::CustomerList()
 
 void CustomerList::addCustomer(int id, string name, string phone)
 {
+    if (id <= 0)
+    {
+        cout << "Invalid customer ID." << endl;
+        return;
+    }
+
+    if (name.empty() || phone.empty())
+    {
+        cout << "Customer name and phone cannot be empty." << endl;
+        return;
+    }
+
+    if (searchCustomerById(id) != nullptr)
+    {
+        cout << "Customer ID already exists." << endl;
+        return;
+    }
+
     Customer* newCustomer = new Customer(id, name, phone);
 
     if (head == nullptr)
     {
         head = newCustomer;
-         saveToFile();
+        saveToFile();
         return;
     }
 
@@ -43,7 +61,8 @@ void CustomerList::addCustomer(int id, string name, string phone)
     }
 
     temp->next = newCustomer;
-     saveToFile();
+
+    saveToFile();
 }
 
 void CustomerList::displayCustomers()
