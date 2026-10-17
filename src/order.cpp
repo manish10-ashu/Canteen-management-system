@@ -1,3 +1,4 @@
+#include <iomanip>
 #include "../include/order.h"
 #include "../include/cart.h"
 #include <iostream>
@@ -539,19 +540,18 @@ void OrderQueue::saveHistoryToFile()
         */
 
         file << order->orderId << " "
-             << order->customerId << " "
-             << order->customerName << " "
-             << order->totalAmount << " "
-             << itemCount << endl;
-
+        << order->customerId << " "
+        << quoted(order->customerName) << " "
+        << order->totalAmount << " "
+        << itemCount << endl;
         item = order->items;
 
         while (item != nullptr)
         {
             file << item->foodId << " "
-                 << item->foodName << " "
-                 << item->price << " "
-                 << item->quantity << endl;
+            << quoted(item->foodName) << " "
+            << item->price << " "
+            << item->quantity << endl;
 
             item = item->next;
         }
@@ -582,14 +582,14 @@ void OrderQueue::loadHistoryFromFile()
         float totalAmount;
         int itemCount;
 
-        if (!(file >> orderId
-                    >> customerId
-                    >> customerName
-                    >> totalAmount
-                    >> itemCount))
-        {
-            break;
-        }
+       if (!(file >> orderId
+            >> customerId
+            >> quoted(customerName)
+            >> totalAmount
+            >> itemCount))
+{
+    break;
+}
 
         Order* newOrder =
             new Order(orderId,
@@ -597,24 +597,30 @@ void OrderQueue::loadHistoryFromFile()
                       customerName);
 
         for (int i = 0; i < itemCount; i++)
-        {
-            int foodId;
-            string foodName;
-            float price;
-            int quantity;
+{
+    int foodId;
+    string foodName;
+    float price;
+    int quantity;
 
-            file >> foodId
-                 >> foodName
-                 >> price
-                 >> quantity;
+    if (!(file >> foodId
+              >> quoted(foodName)
+              >> price
+              >> quantity))
+    {
+        cout << "Invalid order history data." << endl;
 
-            newOrder->addItem(
-                foodId,
-                foodName,
-                price,
-                quantity
-            );
-        }
+        delete newOrder;
+        return;
+    }
+
+    newOrder->addItem(
+        foodId,
+        foodName,
+        price,
+        quantity
+    );
+}
 
         newOrder->calculateTotal();
 
