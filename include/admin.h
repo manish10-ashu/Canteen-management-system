@@ -1,10 +1,7 @@
 #ifndef ADMIN_H
 #define ADMIN_H
-
 #include <string>
-
 using namespace std;
-
 class Admin
 {
 private:
@@ -16,5 +13,4 @@ public:
 
     bool login(string enteredUsername, string enteredPassword);
 };
-
 #endif
