@@ -9,7 +9,7 @@ Customer::Customer(int id, string n, string p)
     customerId = id;
     name = n;
     phone = p;
-    next = nullptr;
+    next = nullptr;//because this new customer isn't linked to anyone yet
 }
 
 void Customer::displayCustomer()
