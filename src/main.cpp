@@ -1,8 +1,8 @@
-#include "../include/Food.h"
-#include "../include/Order.h"
-#include "../include/Customer.h"
-#include "../include/Admin.h"
-#include "../include/Cart.h"
+#include "../include/food.h"
+#include "../include/order.h"
+#include "../include/customer.h"
+#include "../include/admin.h"
+#include "../include/cart.h"
 #include <iostream>
 
 using namespace std;
@@ -17,7 +17,7 @@ int main()
 
     menu.loadFromFile();
     customers.loadFromFile();
-    orders.loadHistoryFromFile();
+    orders.loadOrdersFromFile();
 
     int mainChoice;
 

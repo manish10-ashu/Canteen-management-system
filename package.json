@@ -1,4 +1,13 @@
 {
+  "name": "canteen-management-system",
+  "version": "1.0.0",
+  "description": "Canteen Management System - C++ core with a React + Express website",
+  "private": true,
+  "scripts": {
+    "build:core": "node scripts/build.js",
+    "start:backend": "node backend/server.js",
+    "start:frontend": "npm --prefix frontend run dev"
+  },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "tailwindcss": "^4.3.3"

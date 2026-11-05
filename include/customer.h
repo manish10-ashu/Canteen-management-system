@@ -34,7 +34,9 @@ public:
     Customer* searchCustomer(string name);
     Customer* searchCustomerById(int id);
     Customer* loginCustomer(string name, string phone);
-    
+
+    int getNextCustomerId();
+
     void saveToFile();
     void loadFromFile();
 };

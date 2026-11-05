@@ -1,4 +1,5 @@
-#include "../include/Customer.h"
+#include "../include/customer.h"
+#include "../include/util.h"
 #include <iostream>
 #include <fstream>
 
@@ -127,6 +128,8 @@ Customer* CustomerList::loginCustomer(string name, string phone)
     return nullptr;
 }
 
+// File format (one customer per line, "|" separated):
+//   customerId|name|phone
 void CustomerList::saveToFile()
 {
     ofstream file("data/customers.txt");
@@ -141,8 +144,8 @@ void CustomerList::saveToFile()
 
     while (temp != nullptr)
     {
-        file << temp->customerId << " "
-             << temp->name << " "
+        file << temp->customerId << "|"
+             << temp->name << "|"
              << temp->phone << endl;
 
         temp = temp->next;
@@ -160,14 +163,26 @@ void CustomerList::loadFromFile()
         return;
     }
 
-    int id;
-    string name;
-    string phone;
+    string line;
 
-    while (file >> id >> name >> phone)
+    while (getline(file, line))
     {
+        if (line.empty())
+        {
+            continue;
+        }
+
+        vector<string> parts = splitLine(line, '|');
+
+        if (parts.size() < 3)
+        {
+            continue;
+        }
+
+        // Link directly (do NOT use addCustomer here - it would rewrite the
+        // file while we are still reading it).
         Customer* newCustomer =
-            new Customer(id, name, phone);
+            new Customer(toInt(parts[0]), parts[1], parts[2]);
 
         if (head == nullptr)
         {
@@ -187,4 +202,23 @@ void CustomerList::loadFromFile()
     }
 
     file.close();
+}
+
+int CustomerList::getNextCustomerId()
+{
+    int maxId = 0;
+
+    Customer* temp = head;
+
+    while (temp != nullptr)
+    {
+        if (temp->customerId > maxId)
+        {
+            maxId = temp->customerId;
+        }
+
+        temp = temp->next;
+    }
+
+    return maxId + 1;
 }

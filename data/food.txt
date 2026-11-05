@@ -1,2 +1,4 @@
-69 bobo drink 1200 1
-70 bubu food 1000 2
+101|Classic Burger|Burgers|80|1|🍔|Crispy, juicy and freshly prepared|#FFF0D8
+102|Cheese Pizza|Pizza|150|1|🍕|Cheesy goodness in every bite|#FCE5D7
+103|Steamed Momos|Snacks|60|1|🥟|Soft dumplings with spicy chutney|#E4F1DE
+104|Cold Coffee|Drinks|70|1|🥤|Chilled, creamy and refreshing|#E5E9FF

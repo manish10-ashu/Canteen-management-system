@@ -1,5 +1,5 @@
-#include "../include/Cart.h"
-#include "../include/Food.h"
+#include "../include/cart.h"
+#include "../include/food.h"
 #include <iostream>
 
 using namespace std;
