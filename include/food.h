@@ -57,9 +57,6 @@ public:
 
     Food* findFood(int id);
     Food* getHead();
-
-    void saveToFile();
-    void loadFromFile();
 };
 
 #endif

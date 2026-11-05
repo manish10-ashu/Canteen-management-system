@@ -3,13 +3,16 @@
 //
 //  Usage:  canteen-core <command>
 //
-//  Input  : simple "key=value" lines on stdin (repeat "item=" for each line).
-//           Chosen over JSON input so the core needs no hand-written parser.
-//  Output : a single JSON object/array on stdout.
+//  Input  : simple "key=value" lines on stdin. The whole dataset is streamed
+//           in this way ("food=", "customer=", "order=", "orderitem=" lines,
+//           plus the command parameters) so the stateless core can rebuild its
+//           linked lists / queue before running the command.
+//  Output : a single JSON object on stdout: { "result": <command output>,
+//           "state": { food, customers, orders } }. The backend persists the
+//           "state" so nothing is lost between the one-process-per-request runs.
 //
-//  All the real work (linked lists, FIFO order queue, file handling) is done
-//  by the existing classes - this file only adapts them to a stateless,
-//  per-request process.
+//  All the real work (linked lists, FIFO order queue) is done by the existing
+//  classes - this file only adapts them to a stateless, per-request process.
 // ---------------------------------------------------------------------------
 
 #include "../include/food.h"
@@ -91,12 +94,6 @@ static vector<string> getParamList(const Params& params, const string& key)
     }
 
     return values;
-}
-
-static bool commandNeedsParams(const string& command)
-{
-    // Read-only commands take no input, so don't wait on stdin for them.
-    return command != "list-food" && command != "list-orders";
 }
 
 static bool hasParam(const Params& params, const string& key)
@@ -229,6 +226,19 @@ static string errorJson(const string& message)
     return "{\"success\":false,\"message\":" + jsonString(message) + "}";
 }
 
+// ==================== CORE STATE ====================
+// The core holds no data of its own. Every request receives the full dataset
+// on stdin and returns the updated dataset on stdout.
+
+struct CoreState
+{
+    FoodList menu;
+    OrderQueue orders;
+    CustomerList customers;
+};
+
+static CoreState gState;
+
 // ==================== COMMAND HANDLERS ====================
 
 static Food* findFoodById(FoodList& menu, int id)
@@ -263,16 +273,125 @@ static Order* findOrder(OrderQueue& orders, int orderId)
     return findOrderBySlot(orders.getHistoryHead(), orderId);
 }
 
+// ==================== STATE LOADING ====================
+
+// Each of these rebuilds one linked list / queue from the "|"-separated rows
+// the backend streams on stdin (originally loaded from MongoDB).
+
+static void loadFoodState(const Params& params)
+{
+    vector<string> rows = getParamList(params, "food");
+
+    for (size_t i = 0; i < rows.size(); i++)
+    {
+        vector<string> parts = splitLine(rows[i], '|');
+
+        if (parts.size() < 5)
+        {
+            continue;
+        }
+
+        gState.menu.addFood(
+            toInt(parts[0]),
+            parts[1],
+            parts[2],
+            toFloat(parts[3]),
+            toInt(parts[4], 1) != 0,
+            parts.size() > 5 ? parts[5] : "",
+            parts.size() > 6 ? parts[6] : "",
+            parts.size() > 7 ? parts[7] : ""
+        );
+    }
+}
+
+static void loadCustomerState(const Params& params)
+{
+    vector<string> rows = getParamList(params, "customer");
+
+    for (size_t i = 0; i < rows.size(); i++)
+    {
+        vector<string> parts = splitLine(rows[i], '|');
+
+        if (parts.size() < 3)
+        {
+            continue;
+        }
+
+        gState.customers.addCustomer(toInt(parts[0]), parts[1], parts[2]);
+    }
+}
+
+static void loadOrderState(const Params& params)
+{
+    vector<string> headers = getParamList(params, "order");
+
+    for (size_t i = 0; i < headers.size(); i++)
+    {
+        vector<string> parts = splitLine(headers[i], '|');
+
+        if (parts.size() < 4)
+        {
+            continue;
+        }
+
+        gState.orders.addOrderFromState(
+            toInt(parts[0]), toInt(parts[1]), parts[2], parts[3]);
+    }
+
+    vector<string> items = getParamList(params, "orderitem");
+
+    for (size_t i = 0; i < items.size(); i++)
+    {
+        vector<string> parts = splitLine(items[i], '|');
+
+        if (parts.size() < 5)
+        {
+            continue;
+        }
+
+        Order* order = findOrder(gState.orders, toInt(parts[0]));
+
+        if (order == nullptr)
+        {
+            continue;
+        }
+
+        order->addItem(
+            toInt(parts[1]), parts[2], toFloat(parts[3]), toInt(parts[4]));
+    }
+
+    // Recompute the totals from the loaded items so the core stays the single
+    // source of truth for an order's amount.
+    Order* order = gState.orders.getPendingHead();
+
+    while (order != nullptr)
+    {
+        order->calculateTotal();
+        order = order->next;
+    }
+
+    order = gState.orders.getHistoryHead();
+
+    while (order != nullptr)
+    {
+        order->calculateTotal();
+        order = order->next;
+    }
+}
+
+static void loadState(const Params& params)
+{
+    loadFoodState(params);
+    loadCustomerState(params);
+    loadOrderState(params);
+}
+
 static string handleCommand(const string& command, const Params& params)
 {
-    FoodList menu;
-    OrderQueue orders;
-    CustomerList customers;
+    FoodList& menu = gState.menu;
+    OrderQueue& orders = gState.orders;
+    CustomerList& customers = gState.customers;
     Admin admin("admin", "1234");
-
-    menu.loadFromFile();
-    customers.loadFromFile();
-    orders.loadOrdersFromFile();
 
     // ---------------- FOOD ----------------
 
@@ -587,28 +706,116 @@ static string handleCommand(const string& command, const Params& params)
     return errorJson("Unknown command.");
 }
 
+// ==================== STATE SERIALIZATION ====================
+
+static string stateFoodJson()
+{
+    string json = "[";
+    Food* food = gState.menu.getHead();
+    bool first = true;
+
+    while (food != nullptr)
+    {
+        if (!first)
+        {
+            json += ",";
+        }
+
+        first = false;
+        json += foodToJson(food);
+        food = food->next;
+    }
+
+    json += "]";
+
+    return json;
+}
+
+static string stateCustomerJson()
+{
+    string json = "[";
+    Customer* customer = gState.customers.getHead();
+    bool first = true;
+
+    while (customer != nullptr)
+    {
+        if (!first)
+        {
+            json += ",";
+        }
+
+        first = false;
+
+        json += "{\"id\":" + to_string(customer->customerId)
+              + ",\"name\":" + jsonString(customer->name)
+              + ",\"phone\":" + jsonString(customer->phone) + "}";
+
+        customer = customer->next;
+    }
+
+    json += "]";
+
+    return json;
+}
+
+static string stateOrderJson()
+{
+    string json = "[";
+    Order* order = gState.orders.getPendingHead();
+    bool first = true;
+
+    for (int pass = 0; pass < 2; pass++)
+    {
+        while (order != nullptr)
+        {
+            if (!first)
+            {
+                json += ",";
+            }
+
+            first = false;
+            json += orderToJson(order);
+            order = order->next;
+        }
+
+        order = gState.orders.getHistoryHead();
+    }
+
+    json += "]";
+
+    return json;
+}
+
+static string buildStateJson()
+{
+    return "{\"food\":" + stateFoodJson()
+         + ",\"customers\":" + stateCustomerJson()
+         + ",\"orders\":" + stateOrderJson() + "}";
+}
+
 // ==================== MAIN ====================
 
 int main(int argc, char** argv)
 {
     string command = argc > 1 ? argv[1] : "";
 
-    Params params;
-
-    if (commandNeedsParams(command))
-    {
-        params = readParams();
-    }
+    // Always read stdin: the backend streams the full dataset (plus the
+    // command parameters) as "key=value" lines, then closes the pipe.
+    Params params = readParams();
 
     // The core classes print friendly messages with cout. Send that chatter to
     // stderr so stdout always carries valid JSON and nothing else.
     streambuf* realCout = cout.rdbuf();
     cout.rdbuf(cerr.rdbuf());
 
+    loadState(params);
+
     string result = handleCommand(command, params);
+    string state = buildStateJson();
 
     cout.rdbuf(realCout);
-    cout << result << endl;
+    cout << "{\"result\":" << result
+         << ",\"state\":" << state << "}" << endl;
 
     return 0;
 }

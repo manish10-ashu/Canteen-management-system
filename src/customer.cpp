@@ -1,7 +1,5 @@
 #include "../include/customer.h"
-#include "../include/util.h"
 #include <iostream>
-#include <fstream>
 
 using namespace std;
 
@@ -32,7 +30,6 @@ void CustomerList::addCustomer(int id, string name, string phone)
     if (head == nullptr)
     {
         head = newCustomer;
-         saveToFile();
         return;
     }
 
@@ -44,7 +41,6 @@ void CustomerList::addCustomer(int id, string name, string phone)
     }
 
     temp->next = newCustomer;
-     saveToFile();
 }
 
 void CustomerList::displayCustomers()
@@ -128,80 +124,9 @@ Customer* CustomerList::loginCustomer(string name, string phone)
     return nullptr;
 }
 
-// File format (one customer per line, "|" separated):
-//   customerId|name|phone
-void CustomerList::saveToFile()
+Customer* CustomerList::getHead()
 {
-    ofstream file("data/customers.txt");
-
-    if (!file)
-    {
-        cout << "Unable to open customer file." << endl;
-        return;
-    }
-
-    Customer* temp = head;
-
-    while (temp != nullptr)
-    {
-        file << temp->customerId << "|"
-             << temp->name << "|"
-             << temp->phone << endl;
-
-        temp = temp->next;
-    }
-
-    file.close();
-}
-
-void CustomerList::loadFromFile()
-{
-    ifstream file("data/customers.txt");
-
-    if (!file)
-    {
-        return;
-    }
-
-    string line;
-
-    while (getline(file, line))
-    {
-        if (line.empty())
-        {
-            continue;
-        }
-
-        vector<string> parts = splitLine(line, '|');
-
-        if (parts.size() < 3)
-        {
-            continue;
-        }
-
-        // Link directly (do NOT use addCustomer here - it would rewrite the
-        // file while we are still reading it).
-        Customer* newCustomer =
-            new Customer(toInt(parts[0]), parts[1], parts[2]);
-
-        if (head == nullptr)
-        {
-            head = newCustomer;
-        }
-        else
-        {
-            Customer* temp = head;
-
-            while (temp->next != nullptr)
-            {
-                temp = temp->next;
-            }
-
-            temp->next = newCustomer;
-        }
-    }
-
-    file.close();
+    return head;
 }
 
 int CustomerList::getNextCustomerId()

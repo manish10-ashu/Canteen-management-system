@@ -17,8 +17,9 @@ const connectDB = async () => {
         return true;
     }
     catch (error) {
-        // Non-fatal: the canteen data lives in the C++ core (data/*.txt), so the
-        // API must still start even if MongoDB is unreachable.
+        // Non-fatal at start-up (so the server can still report its status),
+        // but the API needs MongoDB: it is where the canteen data now lives,
+        // so every request fails with a clear message until it connects.
         console.log("MongoDB Connection Failed:", error.message);
         return false;
     }

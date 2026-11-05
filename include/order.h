@@ -84,8 +84,12 @@ public:
     Order* getPendingHead();
     Order* getHistoryHead();
 
-    void saveOrdersToFile();
-    void loadOrdersFromFile();
+    // Rebuild an order from persisted state (used when the backend feeds the
+    // database state into the core on stdin). Links it into the FIFO queue or
+    // the history list according to its status and returns it so the caller
+    // can attach its items.
+    Order* addOrderFromState(int orderId, int customerId,
+                             string customerName, string status);
 };
 
 #endif

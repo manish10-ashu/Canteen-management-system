@@ -15,10 +15,6 @@ int main()
     OrderQueue orders;
     CustomerList customers;
 
-    menu.loadFromFile();
-    customers.loadFromFile();
-    orders.loadOrdersFromFile();
-
     int mainChoice;
 
     do

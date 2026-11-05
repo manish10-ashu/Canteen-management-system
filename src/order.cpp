@@ -1,9 +1,6 @@
 #include "../include/order.h"
 #include "../include/cart.h"
-#include "../include/util.h"
 #include <iostream>
-#include <fstream>
-#include <vector>
 
 using namespace std;
 
@@ -230,8 +227,6 @@ void OrderQueue::placeOrderConfirmed(int orderId, Cart& cart,
 
     // Empty cart after successful order
     cart.clearCart();
-
-    saveOrdersToFile();
 }
 
 
@@ -318,8 +313,6 @@ void OrderQueue::processOrder()
         historyTail = temp;
     }
 
-    saveOrdersToFile();
-
     cout << "\nOrder moved to history." << endl;
 }
 
@@ -366,7 +359,6 @@ bool OrderQueue::updateOrderStatus(int orderId, string status)
                     historyTail = temp;
                 }
 
-                saveOrdersToFile();
                 return true;
             }
 
@@ -385,7 +377,6 @@ bool OrderQueue::updateOrderStatus(int orderId, string status)
         if (temp->orderId == orderId)
         {
             temp->status = status;
-            saveOrdersToFile();
             return true;
         }
 
@@ -453,8 +444,6 @@ void OrderQueue::cancelOrder(int orderId)
             }
 
             delete temp;
-
-            saveOrdersToFile();
 
             cout << "\nOrder cancelled successfully." << endl;
 
@@ -546,8 +535,6 @@ void OrderQueue::cancelCustomerOrder(int orderId,
             }
 
             delete temp;
-
-            saveOrdersToFile();
 
             cout << "\nYour order has been cancelled."
                  << endl;
@@ -645,158 +632,43 @@ int OrderQueue::getNextOrderId()
 }
 
 
-// ==================== SAVE ORDERS (PENDING + HISTORY) ====================
+// ==================== REBUILD FROM STATE ====================
 
-// File format:
-//   header line : orderId|customerId|customerName|total|itemCount|status
-//   item lines  : foodId|foodName|price|quantity   (itemCount of them)
-void OrderQueue::saveOrdersToFile()
+// Re-create an order that was persisted outside the core (MongoDB). Links it
+// into the FIFO queue or the history list based on its status and returns it
+// so the caller can attach the line items and recompute the total.
+Order* OrderQueue::addOrderFromState(int orderId, int customerId,
+                                     string customerName, string status)
 {
-    ofstream file("data/orders.txt");
+    Order* order = new Order(orderId, customerId, customerName);
+    order->status = status;
 
-    if (!file)
+    if (status == "Delivered")
     {
-        cout << "Unable to open orders file." << endl;
-        return;
-    }
-
-    // Pending queue first, then history.
-    Order* order = front;
-
-    for (int pass = 0; pass < 2; pass++)
-    {
-        while (order != nullptr)
+        if (historyHead == nullptr)
         {
-            int itemCount = 0;
-
-            OrderItem* item = order->items;
-
-            while (item != nullptr)
-            {
-                itemCount++;
-                item = item->next;
-            }
-
-            file << order->orderId << "|"
-                 << order->customerId << "|"
-                 << order->customerName << "|"
-                 << order->totalAmount << "|"
-                 << itemCount << "|"
-                 << order->status << endl;
-
-            item = order->items;
-
-            while (item != nullptr)
-            {
-                file << item->foodId << "|"
-                     << item->foodName << "|"
-                     << item->price << "|"
-                     << item->quantity << endl;
-
-                item = item->next;
-            }
-
-            order = order->next;
-        }
-
-        order = historyHead;
-    }
-
-    file.close();
-}
-
-
-// ==================== LOAD ORDERS (PENDING + HISTORY) ====================
-
-void OrderQueue::loadOrdersFromFile()
-{
-    ifstream file("data/orders.txt");
-
-    if (!file)
-    {
-        return;
-    }
-
-    string line;
-
-    while (getline(file, line))
-    {
-        if (line.empty())
-        {
-            continue;
-        }
-
-        vector<string> header = splitLine(line, '|');
-
-        if (header.size() < 6)
-        {
-            continue;
-        }
-
-        int orderId = toInt(header[0]);
-        int customerId = toInt(header[1]);
-        string customerName = header[2];
-        float totalAmount = toFloat(header[3]);
-        int itemCount = toInt(header[4]);
-        string status = header[5];
-
-        Order* order =
-            new Order(orderId, customerId, customerName);
-
-        for (int i = 0; i < itemCount; i++)
-        {
-            string itemLine;
-
-            if (!getline(file, itemLine))
-            {
-                break;
-            }
-
-            vector<string> itemParts = splitLine(itemLine, '|');
-
-            if (itemParts.size() < 4)
-            {
-                continue;
-            }
-
-            order->addItem(
-                toInt(itemParts[0]),
-                itemParts[1],
-                toFloat(itemParts[2]),
-                toInt(itemParts[3])
-            );
-        }
-
-        order->totalAmount = totalAmount;
-        order->status = status;
-
-        if (status == "Delivered")
-        {
-            if (historyHead == nullptr)
-            {
-                historyHead = order;
-                historyTail = order;
-            }
-            else
-            {
-                historyTail->next = order;
-                historyTail = order;
-            }
+            historyHead = order;
+            historyTail = order;
         }
         else
         {
-            if (front == nullptr)
-            {
-                front = order;
-                rear = order;
-            }
-            else
-            {
-                rear->next = order;
-                rear = order;
-            }
+            historyTail->next = order;
+            historyTail = order;
+        }
+    }
+    else
+    {
+        if (front == nullptr)
+        {
+            front = order;
+            rear = order;
+        }
+        else
+        {
+            rear->next = order;
+            rear = order;
         }
     }
 
-    file.close();
+    return order;
 }

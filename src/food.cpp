@@ -1,7 +1,5 @@
 #include "../include/food.h"
-#include "../include/util.h"
 #include <iostream>
-#include <fstream>
 
 using namespace std;
 
@@ -40,7 +38,6 @@ void FoodList::addFood(int id, string name, string category, float price,
 
     if (head == nullptr) {
         head = newFood;
-        saveToFile();
         return;
     }
 
@@ -51,7 +48,6 @@ void FoodList::addFood(int id, string name, string category, float price,
     }
 
     temp->next = newFood;
-    saveToFile();
 }
 
 void FoodList::displayMenu() {
@@ -107,8 +103,6 @@ void FoodList::updateFood(int id) {
             cout << "Enter new price: ";
             cin >> temp->price;
 
-            saveToFile();
-
             cout << "Food updated successfully." << endl;
             return;
         }
@@ -137,7 +131,6 @@ bool FoodList::updateFood(int id, string name, string category, float price,
             temp->description = description;
             temp->color = color;
 
-            saveToFile();
             return true;
         }
 
@@ -159,8 +152,6 @@ void FoodList::deleteFood(int id) {
         head = head->next;
         delete temp;
 
-        saveToFile();
-
         cout << "Food deleted successfully." << endl;
         return;
     }
@@ -180,8 +171,6 @@ void FoodList::deleteFood(int id) {
     temp->next = deleteNode->next;
 
     delete deleteNode;
-
-    saveToFile();
 
     cout << "Food deleted successfully." << endl;
 }
@@ -204,95 +193,4 @@ Food* FoodList::findFood(int id) {
 
 Food* FoodList::getHead() {
     return head;
-}
-
-// File format (one food per line, "|" separated):
-//   id|name|category|price|available|emoji|description|color
-void FoodList::saveToFile()
-{
-    ofstream file("data/food.txt");
-
-    if (!file)
-    {
-        cout << "Unable to open food file." << endl;
-        return;
-    }
-
-    Food* temp = head;
-
-    while (temp != nullptr)
-    {
-        file << temp->id << "|"
-             << temp->name << "|"
-             << temp->category << "|"
-             << temp->price << "|"
-             << (temp->available ? 1 : 0) << "|"
-             << temp->emoji << "|"
-             << temp->description << "|"
-             << temp->color << endl;
-
-        temp = temp->next;
-    }
-
-    file.close();
-}
-
-void FoodList::loadFromFile()
-{
-    ifstream file("data/food.txt");
-
-    if (!file)
-    {
-        return;
-    }
-
-    string line;
-
-    while (getline(file, line))
-    {
-        if (line.empty())
-        {
-            continue;
-        }
-
-        vector<string> parts = splitLine(line, '|');
-
-        if (parts.size() < 5)
-        {
-            continue;
-        }
-
-        int id = toInt(parts[0]);
-        string name = parts[1];
-        string category = parts[2];
-        float price = toFloat(parts[3]);
-        bool available = toInt(parts[4], 1) != 0;
-
-        string emoji = parts.size() > 5 ? parts[5] : "";
-        string description = parts.size() > 6 ? parts[6] : "";
-        string color = parts.size() > 7 ? parts[7] : "";
-
-        // Link directly (do NOT use addFood here - it would rewrite the
-        // file while we are still reading it).
-        Food* newFood = new Food(id, name, category, price,
-                                 available, emoji, description, color);
-
-        if (head == nullptr)
-        {
-            head = newFood;
-        }
-        else
-        {
-            Food* temp = head;
-
-            while (temp->next != nullptr)
-            {
-                temp = temp->next;
-            }
-
-            temp->next = newFood;
-        }
-    }
-
-    file.close();
 }

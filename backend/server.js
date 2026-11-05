@@ -15,6 +15,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 
 const { runCore, isCoreAvailable, CoreError } = require('./cppBridge');
+const { seedIfEmpty } = require('./stateStore');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -553,7 +554,15 @@ app.use((error, req, res, next) => {
 });
 
 const startServer = async () => {
-    await connectDB();
+    const connected = await connectDB();
+
+    if (connected) {
+        try {
+            await seedIfEmpty();
+        } catch (error) {
+            console.log('Seeding skipped:', error.message);
+        }
+    }
 
     app.listen(PORT, () => {
         console.log(`Backend running at http://localhost:${PORT}`);
