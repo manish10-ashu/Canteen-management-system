@@ -1,3 +1,4 @@
+
 #include "../include/customer.h"
 #include <iostream>
 
@@ -25,6 +26,24 @@ CustomerList::CustomerList()
 
 void CustomerList::addCustomer(int id, string name, string phone)
 {
+    if (id <= 0)
+    {
+        cout << "Invalid customer ID." << endl;
+        return;
+    }
+
+    if (name.empty() || phone.empty())
+    {
+        cout << "Customer name and phone cannot be empty." << endl;
+        return;
+    }
+
+    if (searchCustomerById(id) != nullptr)
+    {
+        cout << "Customer ID already exists." << endl;
+        return;
+    }
+
     Customer* newCustomer = new Customer(id, name, phone);
 
     if (head == nullptr)
@@ -59,19 +78,13 @@ void CustomerList::displayCustomers()
     {
         temp->displayCustomer();
         cout << "------------------------------------" << endl;
-
         temp = temp->next;
     }
 }
 
 bool Customer::login(string enteredName, string enteredPhone)
 {
-    if (name == enteredName && phone == enteredPhone)
-    {
-        return true;
-    }
-
-    return false;
+    return name == enteredName && phone == enteredPhone;
 }
 
 Customer* CustomerList::searchCustomer(string name)
@@ -81,25 +94,22 @@ Customer* CustomerList::searchCustomer(string name)
     while (temp != nullptr)
     {
         if (temp->name == name)
-        {
             return temp;
-        }
 
         temp = temp->next;
     }
 
     return nullptr;
 }
- Customer* CustomerList::searchCustomerById(int id)
+
+Customer* CustomerList::searchCustomerById(int id)
 {
     Customer* temp = head;
 
     while (temp != nullptr)
     {
         if (temp->customerId == id)
-        {
             return temp;
-        }
 
         temp = temp->next;
     }
@@ -114,9 +124,7 @@ Customer* CustomerList::loginCustomer(string name, string phone)
     while (temp != nullptr)
     {
         if (temp->name == name && temp->phone == phone)
-        {
             return temp;
-        }
 
         temp = temp->next;
     }
@@ -132,15 +140,12 @@ Customer* CustomerList::getHead()
 int CustomerList::getNextCustomerId()
 {
     int maxId = 0;
-
     Customer* temp = head;
 
     while (temp != nullptr)
     {
         if (temp->customerId > maxId)
-        {
             maxId = temp->customerId;
-        }
 
         temp = temp->next;
     }

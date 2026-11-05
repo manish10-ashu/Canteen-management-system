@@ -1,3 +1,4 @@
+
 #include "../include/food.h"
 #include <iostream>
 
@@ -17,42 +18,73 @@ Food::Food(int id, string name, string category, float price,
     this->next = nullptr;
 }
 
-void Food::display() {
-    cout << "ID: " << id << endl;
+void Food::display()
+{
+    cout << "------------------------" << endl;
+    cout << "Food ID: " << id << endl;
     cout << "Name: " << name << endl;
     cout << "Category: " << category << endl;
     cout << "Price: Rs. " << price << endl;
     cout << "Available: " << (available ? "Yes" : "No") << endl;
+    cout << "------------------------" << endl;
 }
 
-FoodList::FoodList() {
+FoodList::FoodList()
+{
     head = nullptr;
 }
 
 void FoodList::addFood(int id, string name, string category, float price,
                        bool available, string emoji, string description,
-                       string color) {
+                       string color)
+{
+    if (id <= 0)
+    {
+        cout << "Invalid food ID." << endl;
+        return;
+    }
+
+    if (price <= 0)
+    {
+        cout << "Price must be greater than zero." << endl;
+        return;
+    }
+
+    if (name.empty() || category.empty())
+    {
+        cout << "Food name and category cannot be empty." << endl;
+        return;
+    }
+
+    if (findFood(id) != nullptr)
+    {
+        cout << "Food ID already exists." << endl;
+        return;
+    }
 
     Food* newFood = new Food(id, name, category, price,
                              available, emoji, description, color);
 
-    if (head == nullptr) {
+    if (head == nullptr)
+    {
         head = newFood;
         return;
     }
 
     Food* temp = head;
 
-    while (temp->next != nullptr) {
+    while (temp->next != nullptr)
+    {
         temp = temp->next;
     }
 
     temp->next = newFood;
 }
 
-void FoodList::displayMenu() {
-
-    if (head == nullptr) {
+void FoodList::displayMenu()
+{
+    if (head == nullptr)
+    {
         cout << "Menu is empty." << endl;
         return;
     }
@@ -61,20 +93,22 @@ void FoodList::displayMenu() {
 
     cout << "\n========== CANTEEN MENU ==========" << endl;
 
-    while (temp != nullptr) {
+    while (temp != nullptr)
+    {
         temp->display();
         cout << "----------------------------------" << endl;
         temp = temp->next;
     }
 }
 
-void FoodList::searchFood(int id) {
-
+void FoodList::searchFood(int id)
+{
     Food* temp = head;
 
-    while (temp != nullptr) {
-
-        if (temp->id == id) {
+    while (temp != nullptr)
+    {
+        if (temp->id == id)
+        {
             cout << "\nFood Found:" << endl;
             temp->display();
             return;
@@ -86,14 +120,14 @@ void FoodList::searchFood(int id) {
     cout << "Food with ID " << id << " not found." << endl;
 }
 
-void FoodList::updateFood(int id) {
-
+void FoodList::updateFood(int id)
+{
     Food* temp = head;
 
-    while (temp != nullptr) {
-
-        if (temp->id == id) {
-
+    while (temp != nullptr)
+    {
+        if (temp->id == id)
+        {
             cout << "Enter new name: ";
             cin >> temp->name;
 
@@ -115,14 +149,14 @@ void FoodList::updateFood(int id) {
 
 bool FoodList::updateFood(int id, string name, string category, float price,
                           bool available, string emoji, string description,
-                          string color) {
-
+                          string color)
+{
     Food* temp = head;
 
-    while (temp != nullptr) {
-
-        if (temp->id == id) {
-
+    while (temp != nullptr)
+    {
+        if (temp->id == id)
+        {
             temp->name = name;
             temp->category = category;
             temp->price = price;
@@ -140,14 +174,16 @@ bool FoodList::updateFood(int id, string name, string category, float price,
     return false;
 }
 
-void FoodList::deleteFood(int id) {
-
-    if (head == nullptr) {
+void FoodList::deleteFood(int id)
+{
+    if (head == nullptr)
+    {
         cout << "Menu is empty." << endl;
         return;
     }
 
-    if (head->id == id) {
+    if (head->id == id)
+    {
         Food* temp = head;
         head = head->next;
         delete temp;
@@ -158,11 +194,13 @@ void FoodList::deleteFood(int id) {
 
     Food* temp = head;
 
-    while (temp->next != nullptr && temp->next->id != id) {
+    while (temp->next != nullptr && temp->next->id != id)
+    {
         temp = temp->next;
     }
 
-    if (temp->next == nullptr) {
+    if (temp->next == nullptr)
+    {
         cout << "Food with ID " << id << " not found." << endl;
         return;
     }
@@ -175,13 +213,14 @@ void FoodList::deleteFood(int id) {
     cout << "Food deleted successfully." << endl;
 }
 
-Food* FoodList::findFood(int id) {
-
+Food* FoodList::findFood(int id)
+{
     Food* temp = head;
 
-    while (temp != nullptr) {
-
-        if (temp->id == id) {
+    while (temp != nullptr)
+    {
+        if (temp->id == id)
+        {
             return temp;
         }
 
@@ -191,6 +230,7 @@ Food* FoodList::findFood(int id) {
     return nullptr;
 }
 
-Food* FoodList::getHead() {
+Food* FoodList::getHead()
+{
     return head;
 }

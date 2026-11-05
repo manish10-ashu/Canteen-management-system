@@ -12,7 +12,7 @@ public:
     string name;
     string phone;
 
-    Customer* next;
+    Customer* next; //pointer to the next customer node
 
     Customer(int id, string n, string p);
 

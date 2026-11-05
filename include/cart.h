@@ -14,7 +14,6 @@ public:
     string foodName;
     float price;
     int quantity;
-
     CartItem* next;
 
     CartItem(int id, string name, float price, int quantity);
