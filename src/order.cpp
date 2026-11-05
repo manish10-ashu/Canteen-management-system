@@ -1,8 +1,6 @@
-#include <iomanip>
 #include "../include/order.h"
 #include "../include/cart.h"
 #include <iostream>
-#include <fstream>
 
 using namespace std;
 
@@ -26,6 +24,7 @@ Order::Order(int id, int cId, string cName)
     customerId = cId;
     customerName = cName;
     totalAmount = 0;
+    status = "Pending";
 
     items = nullptr;
     next = nullptr;
@@ -71,6 +70,7 @@ void Order::display()
     cout << "\nOrder ID: " << orderId << endl;
     cout << "Customer ID: " << customerId << endl;
     cout << "Customer Name: " << customerName << endl;
+    cout << "Status: " << status << endl;
 
     cout << "\nItems:" << endl;
 
@@ -134,8 +134,35 @@ OrderQueue::OrderQueue()
     historyTail = nullptr;
 }
 
+// Copy the cart's linked list into a brand new order (shared by both the
+// interactive and the programmatic entry points so the logic lives once).
+static Order* buildOrderFromCart(int orderId, Cart& cart,
+                                 int customerId,
+                                 const string& customerName)
+{
+    Order* order = new Order(orderId, customerId, customerName);
 
-// ==================== PLACE ORDER ====================
+    CartItem* cartItem = cart.getHead();
+
+    while (cartItem != nullptr)
+    {
+        order->addItem(
+            cartItem->foodId,
+            cartItem->foodName,
+            cartItem->price,
+            cartItem->quantity
+        );
+
+        cartItem = cartItem->next;
+    }
+
+    order->calculateTotal();
+
+    return order;
+}
+
+
+// ==================== PLACE ORDER (CONSOLE) ====================
 
 void OrderQueue::placeOrder(int orderId, Cart& cart,
                             int customerId,
@@ -147,37 +174,11 @@ void OrderQueue::placeOrder(int orderId, Cart& cart,
         return;
     }
 
-    Order* newOrder =
-        new Order(orderId, customerId, customerName);
+    // Show the bill before confirmation.
+    Order* preview =
+        buildOrderFromCart(orderId, cart, customerId, customerName);
 
-    /*
-       Cart contains:
-
-       CartItem -> CartItem -> CartItem
-
-       We copy those items into:
-
-       OrderItem -> OrderItem -> OrderItem
-    */
-
-    CartItem* cartItem = cart.getHead();
-
-    while (cartItem != nullptr)
-    {
-        newOrder->addItem(
-            cartItem->foodId,
-            cartItem->foodName,
-            cartItem->price,
-            cartItem->quantity
-        );
-
-        cartItem = cartItem->next;
-    }
-
-    newOrder->calculateTotal();
-
-    // Show bill before confirmation
-    newOrder->displayBill();
+    preview->displayBill();
 
     char confirm;
 
@@ -187,10 +188,30 @@ void OrderQueue::placeOrder(int orderId, Cart& cart,
     if (confirm != 'y' && confirm != 'Y')
     {
         cout << "Order cancelled." << endl;
-
-        delete newOrder;
         return;
     }
+
+    placeOrderConfirmed(orderId, cart, customerId, customerName);
+
+    cout << "\nOrder placed successfully!" << endl;
+    cout << "Order ID: " << orderId << endl;
+    cout << "Order is now pending." << endl;
+}
+
+
+// ==================== PLACE ORDER (PROGRAMMATIC) ====================
+
+void OrderQueue::placeOrderConfirmed(int orderId, Cart& cart,
+                                     int customerId,
+                                     string customerName)
+{
+    if (cart.isEmpty())
+    {
+        return;
+    }
+
+    Order* newOrder =
+        buildOrderFromCart(orderId, cart, customerId, customerName);
 
     // Add order to FIFO queue
     if (front == nullptr)
@@ -203,10 +224,6 @@ void OrderQueue::placeOrder(int orderId, Cart& cart,
         rear->next = newOrder;
         rear = newOrder;
     }
-
-    cout << "\nOrder placed successfully!" << endl;
-    cout << "Order ID: " << orderId << endl;
-    cout << "Order is now pending." << endl;
 
     // Empty cart after successful order
     cart.clearCart();
@@ -268,7 +285,6 @@ void OrderQueue::processOrder()
     cout << "\nPayment Status: Pending" << endl;
 
     cout << "\nPress Enter after receiving payment...";
-
     cin.get();
 
     cout << "\nPayment received successfully." << endl;
@@ -283,6 +299,7 @@ void OrderQueue::processOrder()
     }
 
     temp->next = nullptr;
+    temp->status = "Delivered";
 
     // Add to history
     if (historyHead == nullptr)
@@ -296,9 +313,77 @@ void OrderQueue::processOrder()
         historyTail = temp;
     }
 
-    saveHistoryToFile();
-
     cout << "\nOrder moved to history." << endl;
+}
+
+
+// ==================== UPDATE STATUS (PROGRAMMATIC) ====================
+
+bool OrderQueue::updateOrderStatus(int orderId, string status)
+{
+    if (status == "Delivered")
+    {
+        // Find the order in the pending queue, unlink it and move it to history.
+        Order* temp = front;
+        Order* previous = nullptr;
+
+        while (temp != nullptr)
+        {
+            if (temp->orderId == orderId)
+            {
+                if (previous == nullptr)
+                {
+                    front = temp->next;
+                }
+                else
+                {
+                    previous->next = temp->next;
+                }
+
+                if (temp == rear)
+                {
+                    rear = previous;
+                }
+
+                temp->next = nullptr;
+                temp->status = "Delivered";
+
+                if (historyHead == nullptr)
+                {
+                    historyHead = temp;
+                    historyTail = temp;
+                }
+                else
+                {
+                    historyTail->next = temp;
+                    historyTail = temp;
+                }
+
+                return true;
+            }
+
+            previous = temp;
+            temp = temp->next;
+        }
+
+        return false;
+    }
+
+    // Pending / Preparing - just update the status in place.
+    Order* temp = front;
+
+    while (temp != nullptr)
+    {
+        if (temp->orderId == orderId)
+        {
+            temp->status = status;
+            return true;
+        }
+
+        temp = temp->next;
+    }
+
+    return false;
 }
 
 
@@ -503,138 +588,87 @@ void OrderQueue::displayCustomerHistory(int customerId)
 }
 
 
-// ==================== SAVE HISTORY ====================
+// ==================== ACCESSORS / HELPERS ====================
 
-void OrderQueue::saveHistoryToFile()
+Order* OrderQueue::getPendingHead()
 {
-    ofstream file("data/orders.txt");
+    return front;
+}
 
-    if (!file)
+Order* OrderQueue::getHistoryHead()
+{
+    return historyHead;
+}
+
+int OrderQueue::getNextOrderId()
+{
+    int maxId = 1000;
+
+    Order* temp = front;
+
+    while (temp != nullptr)
     {
-        cout << "Unable to open orders file." << endl;
-        return;
-    }
-
-    Order* order = historyHead;
-
-    while (order != nullptr)
-    {
-        int itemCount = 0;
-
-        OrderItem* item = order->items;
-
-        while (item != nullptr)
+        if (temp->orderId > maxId)
         {
-            itemCount++;
-            item = item->next;
+            maxId = temp->orderId;
         }
 
-        /*
-            First line:
+        temp = temp->next;
+    }
 
-            orderId customerId customerName total itemCount
+    temp = historyHead;
 
-            Then itemCount lines:
-
-            foodId foodName price quantity
-        */
-
-        file << order->orderId << " "
-        << order->customerId << " "
-        << quoted(order->customerName) << " "
-        << order->totalAmount << " "
-        << itemCount << endl;
-        item = order->items;
-
-        while (item != nullptr)
+    while (temp != nullptr)
+    {
+        if (temp->orderId > maxId)
         {
-            file << item->foodId << " "
-            << quoted(item->foodName) << " "
-            << item->price << " "
-            << item->quantity << endl;
-
-            item = item->next;
+            maxId = temp->orderId;
         }
 
-        order = order->next;
+        temp = temp->next;
     }
 
-    file.close();
+    return maxId + 1;
 }
 
 
-// ==================== LOAD HISTORY ====================
+// ==================== REBUILD FROM STATE ====================
 
-void OrderQueue::loadHistoryFromFile()
+// Re-create an order that was persisted outside the core (MongoDB). Links it
+// into the FIFO queue or the history list based on its status and returns it
+// so the caller can attach the line items and recompute the total.
+Order* OrderQueue::addOrderFromState(int orderId, int customerId,
+                                     string customerName, string status)
 {
-    ifstream file("data/orders.txt");
+    Order* order = new Order(orderId, customerId, customerName);
+    order->status = status;
 
-    if (!file)
+    if (status == "Delivered")
     {
-        return;
-    }
-
-    while (true)
-    {
-        int orderId;
-        int customerId;
-        string customerName;
-        float totalAmount;
-        int itemCount;
-
-       if (!(file >> orderId
-            >> customerId
-            >> quoted(customerName)
-            >> totalAmount
-            >> itemCount))
-{
-    break;
-}
-
-        Order* newOrder =
-            new Order(orderId,
-                      customerId,
-                      customerName);
-
-        for (int i = 0; i < itemCount; i++)
-{
-    int foodId;
-    string foodName;
-    float price;
-    int quantity;
-
-    if (!(file >> foodId
-              >> quoted(foodName)
-              >> price
-              >> quantity))
-    {
-        cout << "Invalid order history data." << endl;
-
-        delete newOrder;
-        return;
-    }
-
-    newOrder->addItem(
-        foodId,
-        foodName,
-        price,
-        quantity
-    );
-}
-
-        newOrder->calculateTotal();
-
         if (historyHead == nullptr)
         {
-            historyHead = newOrder;
-            historyTail = newOrder;
+            historyHead = order;
+            historyTail = order;
         }
         else
         {
-            historyTail->next = newOrder;
-            historyTail = newOrder;
+            historyTail->next = order;
+            historyTail = order;
+        }
+    }
+    else
+    {
+        if (front == nullptr)
+        {
+            front = order;
+            rear = order;
+        }
+        else
+        {
+            rear->next = order;
+            rear = order;
         }
     }
 
-    file.close();
+    return order;
 }

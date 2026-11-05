@@ -28,6 +28,7 @@ public:
     int customerId;
     string customerName;
     float totalAmount;
+    string status;      // Pending | Preparing | Delivered
 
     OrderItem* items;
 
@@ -56,12 +57,21 @@ private:
 public:
     OrderQueue();
 
-    // New multiple-item order
+    // Interactive (console) version - shows the bill and asks to confirm.
     void placeOrder(int orderId, Cart& cart,
                     int customerId, string customerName);
 
+    // Programmatic version - used by the website API, no prompts.
+    void placeOrderConfirmed(int orderId, Cart& cart,
+                             int customerId, string customerName);
+
     void displayOrders();
     void processOrder();
+
+    // Programmatic status change used by the website API.
+    // Pending/Preparing stay in the queue; Delivered moves to history.
+    bool updateOrderStatus(int orderId, string status);
+
     void displayHistory();
     void cancelOrder(int orderId);
 
@@ -69,8 +79,17 @@ public:
     void cancelCustomerOrder(int orderId, int customerId);
     void displayCustomerHistory(int customerId);
 
-    void saveHistoryToFile();
-    void loadHistoryFromFile();
+    int getNextOrderId();
+
+    Order* getPendingHead();
+    Order* getHistoryHead();
+
+    // Rebuild an order from persisted state (used when the backend feeds the
+    // database state into the core on stdin). Links it into the FIFO queue or
+    // the history list according to its status and returns it so the caller
+    // can attach its items.
+    Order* addOrderFromState(int orderId, int customerId,
+                             string customerName, string status);
 };
 
 #endif

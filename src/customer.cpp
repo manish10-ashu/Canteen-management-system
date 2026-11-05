@@ -1,6 +1,6 @@
+
 #include "../include/customer.h"
 #include <iostream>
-#include <fstream>
 
 using namespace std;
 
@@ -9,7 +9,7 @@ Customer::Customer(int id, string n, string p)
     customerId = id;
     name = n;
     phone = p;
-    next = nullptr;//because this new customer isn't linked to anyone yet
+    next = nullptr;
 }
 
 void Customer::displayCustomer()
@@ -49,7 +49,6 @@ void CustomerList::addCustomer(int id, string name, string phone)
     if (head == nullptr)
     {
         head = newCustomer;
-        saveToFile();
         return;
     }
 
@@ -61,8 +60,6 @@ void CustomerList::addCustomer(int id, string name, string phone)
     }
 
     temp->next = newCustomer;
-
-    saveToFile();
 }
 
 void CustomerList::displayCustomers()
@@ -81,19 +78,13 @@ void CustomerList::displayCustomers()
     {
         temp->displayCustomer();
         cout << "------------------------------------" << endl;
-
         temp = temp->next;
     }
 }
 
 bool Customer::login(string enteredName, string enteredPhone)
 {
-    if (name == enteredName && phone == enteredPhone)
-    {
-        return true;
-    }
-
-    return false;
+    return name == enteredName && phone == enteredPhone;
 }
 
 Customer* CustomerList::searchCustomer(string name)
@@ -103,25 +94,22 @@ Customer* CustomerList::searchCustomer(string name)
     while (temp != nullptr)
     {
         if (temp->name == name)
-        {
             return temp;
-        }
 
         temp = temp->next;
     }
 
     return nullptr;
 }
- Customer* CustomerList::searchCustomerById(int id)
+
+Customer* CustomerList::searchCustomerById(int id)
 {
     Customer* temp = head;
 
     while (temp != nullptr)
     {
         if (temp->customerId == id)
-        {
             return temp;
-        }
 
         temp = temp->next;
     }
@@ -136,9 +124,7 @@ Customer* CustomerList::loginCustomer(string name, string phone)
     while (temp != nullptr)
     {
         if (temp->name == name && temp->phone == phone)
-        {
             return temp;
-        }
 
         temp = temp->next;
     }
@@ -146,64 +132,23 @@ Customer* CustomerList::loginCustomer(string name, string phone)
     return nullptr;
 }
 
-void CustomerList::saveToFile()
+Customer* CustomerList::getHead()
 {
-    ofstream file("data/customers.txt");
+    return head;
+}
 
-    if (!file)
-    {
-        cout << "Unable to open customer file." << endl;
-        return;
-    }
-
+int CustomerList::getNextCustomerId()
+{
+    int maxId = 0;
     Customer* temp = head;
 
     while (temp != nullptr)
     {
-        file << temp->customerId << " "
-             << temp->name << " "
-             << temp->phone << endl;
+        if (temp->customerId > maxId)
+            maxId = temp->customerId;
 
         temp = temp->next;
     }
 
-    file.close();
-}
-
-void CustomerList::loadFromFile()
-{
-    ifstream file("data/customers.txt");
-
-    if (!file)
-    {
-        return;
-    }
-
-    int id;
-    string name;
-    string phone;
-
-    while (file >> id >> name >> phone)
-    {
-        Customer* newCustomer =
-            new Customer(id, name, phone);
-
-        if (head == nullptr)
-        {
-            head = newCustomer;
-        }
-        else
-        {
-            Customer* temp = head;
-
-            while (temp->next != nullptr)
-            {
-                temp = temp->next;
-            }
-
-            temp->next = newCustomer;
-        }
-    }
-
-    file.close();
+    return maxId + 1;
 }
