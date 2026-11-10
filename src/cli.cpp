@@ -685,6 +685,29 @@ static string handleCommand(const string& command, const Params& params)
 
         return json;
     }
+    if (command == "list-customers")
+{
+    string json = "[";
+    Customer* customer = customers.getHead();
+    bool first = true;
+
+    while (customer != nullptr)
+    {
+        if (!first)
+            json += ",";
+
+        first = false;
+
+        json += "{\"id\":" + to_string(customer->customerId)
+              + ",\"name\":" + jsonString(customer->name)
+              + ",\"phone\":" + jsonString(customer->phone) + "}";
+
+        customer = customer->next;
+    }
+
+    json += "]";
+    return json;
+}
 
     // ---------------- ADMIN ----------------
 

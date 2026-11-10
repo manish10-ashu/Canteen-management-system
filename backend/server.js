@@ -16,6 +16,7 @@ const crypto = require('crypto');
 
 const { runCore, isCoreAvailable, CoreError } = require('./cppBridge');
 const { seedIfEmpty } = require('./stateStore');
+const { Customer } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -156,6 +157,49 @@ app.get(
   asyncRoute(async (req, res) => {
     const foods = await runCore('list-food');
     res.json(Array.isArray(foods) ? foods : []);
+  })
+);
+
+// ==================== CUSTOMERS (admin) ====================
+
+app.get(
+  '/api/customers',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const customers = await Customer.find({})
+      .sort({ id: 1 })
+      .select({ _id: 0, id: 1, name: 1, phone: 1 })
+      .lean();
+
+    res.json({
+      success: true,
+      customers,
+    });
+  })
+);
+
+// ==================== CUSTOMER ORDER CANCELLATION ====================
+
+app.delete(
+  '/api/customers/:id/orders/:orderId',
+  requireCustomerOrAdmin,
+  asyncRoute(async (req, res) => {
+    const orderId = toPositiveInt(req.params.orderId);
+
+    if (!orderId) {
+      return fail(res, 400, 'Invalid order ID.');
+    }
+
+    const result = await runCore('cancel-order', { orderId });
+
+    if (!result.success) {
+      return fail(res, 404, result.message || 'Order not found.');
+    }
+
+    res.json({
+      success: true,
+      message: 'Order cancelled successfully.',
+    });
   })
 );
 
