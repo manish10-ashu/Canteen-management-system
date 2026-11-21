@@ -1,4 +1,4 @@
-#ifndef ADMIN_H
+#ifndef ADMIN_H //prevent the compiler from including this header file more than once in a single compilation unit
 #define ADMIN_H
 #include <string>
 using namespace std;
