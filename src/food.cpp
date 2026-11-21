@@ -1,19 +1,25 @@
+
 #include "../include/food.h"
 #include <iostream>
-#include <fstream>
 
 using namespace std;
 
-Food::Food(int id, string name, string category, float price, bool available) {
+Food::Food(int id, string name, string category, float price,
+           bool available, string emoji, string description, string color)
+{
     this->id = id;
     this->name = name;
     this->category = category;
     this->price = price;
     this->available = available;
+    this->emoji = emoji;
+    this->description = description;
+    this->color = color;
     this->next = nullptr;
 }
 
-void Food::display() {
+void Food::display()
+{
     cout << "------------------------" << endl;
     cout << "Food ID: " << id << endl;
     cout << "Name: " << name << endl;
@@ -23,11 +29,14 @@ void Food::display() {
     cout << "------------------------" << endl;
 }
 
-FoodList::FoodList() {
+FoodList::FoodList()
+{
     head = nullptr;
 }
 
-void FoodList::addFood(int id, string name, string category, float price)
+void FoodList::addFood(int id, string name, string category, float price,
+                       bool available, string emoji, string description,
+                       string color)
 {
     if (id <= 0)
     {
@@ -41,18 +50,24 @@ void FoodList::addFood(int id, string name, string category, float price)
         return;
     }
 
+    if (name.empty() || category.empty())
+    {
+        cout << "Food name and category cannot be empty." << endl;
+        return;
+    }
+
     if (findFood(id) != nullptr)
     {
         cout << "Food ID already exists." << endl;
         return;
     }
 
-    Food* newFood = new Food(id, name, category, price);
+    Food* newFood = new Food(id, name, category, price,
+                             available, emoji, description, color);
 
     if (head == nullptr)
     {
         head = newFood;
-        saveToFile();
         return;
     }
 
@@ -64,13 +79,12 @@ void FoodList::addFood(int id, string name, string category, float price)
     }
 
     temp->next = newFood;
-
-    saveToFile();
 }
 
-void FoodList::displayMenu() {
-
-    if (head == nullptr) {
+void FoodList::displayMenu()
+{
+    if (head == nullptr)
+    {
         cout << "Menu is empty." << endl;
         return;
     }
@@ -79,20 +93,22 @@ void FoodList::displayMenu() {
 
     cout << "\n========== CANTEEN MENU ==========" << endl;
 
-    while (temp != nullptr) {
+    while (temp != nullptr)
+    {
         temp->display();
         cout << "----------------------------------" << endl;
         temp = temp->next;
     }
 }
 
-void FoodList::searchFood(int id) {
-
+void FoodList::searchFood(int id)
+{
     Food* temp = head;
 
-    while (temp != nullptr) {
-
-        if (temp->id == id) {
+    while (temp != nullptr)
+    {
+        if (temp->id == id)
+        {
             cout << "\nFood Found:" << endl;
             temp->display();
             return;
@@ -104,14 +120,14 @@ void FoodList::searchFood(int id) {
     cout << "Food with ID " << id << " not found." << endl;
 }
 
-void FoodList::updateFood(int id) {
-
+void FoodList::updateFood(int id)
+{
     Food* temp = head;
 
-    while (temp != nullptr) {
-
-        if (temp->id == id) {
-
+    while (temp != nullptr)
+    {
+        if (temp->id == id)
+        {
             cout << "Enter new name: ";
             cin >> temp->name;
 
@@ -120,8 +136,6 @@ void FoodList::updateFood(int id) {
 
             cout << "Enter new price: ";
             cin >> temp->price;
-
-              saveToFile();
 
             cout << "Food updated successfully." << endl;
             return;
@@ -133,31 +147,60 @@ void FoodList::updateFood(int id) {
     cout << "Food with ID " << id << " not found." << endl;
 }
 
-void FoodList::deleteFood(int id) {
+bool FoodList::updateFood(int id, string name, string category, float price,
+                          bool available, string emoji, string description,
+                          string color)
+{
+    Food* temp = head;
 
-    if (head == nullptr) {
+    while (temp != nullptr)
+    {
+        if (temp->id == id)
+        {
+            temp->name = name;
+            temp->category = category;
+            temp->price = price;
+            temp->available = available;
+            temp->emoji = emoji;
+            temp->description = description;
+            temp->color = color;
+
+            return true;
+        }
+
+        temp = temp->next;
+    }
+
+    return false;
+}
+
+void FoodList::deleteFood(int id)
+{
+    if (head == nullptr)
+    {
         cout << "Menu is empty." << endl;
         return;
     }
 
-    if (head->id == id) {
+    if (head->id == id)
+    {
         Food* temp = head;
         head = head->next;
         delete temp;
-        
-          saveToFile();
-          
+
         cout << "Food deleted successfully." << endl;
         return;
     }
 
     Food* temp = head;
 
-    while (temp->next != nullptr && temp->next->id != id) {
+    while (temp->next != nullptr && temp->next->id != id)
+    {
         temp = temp->next;
     }
 
-    if (temp->next == nullptr) {
+    if (temp->next == nullptr)
+    {
         cout << "Food with ID " << id << " not found." << endl;
         return;
     }
@@ -170,13 +213,14 @@ void FoodList::deleteFood(int id) {
     cout << "Food deleted successfully." << endl;
 }
 
-Food* FoodList::findFood(int id) {
-
+Food* FoodList::findFood(int id)
+{
     Food* temp = head;
 
-    while (temp != nullptr) {
-
-        if (temp->id == id) {
+    while (temp != nullptr)
+    {
+        if (temp->id == id)
+        {
             return temp;
         }
 
@@ -186,68 +230,7 @@ Food* FoodList::findFood(int id) {
     return nullptr;
 }
 
-void FoodList::saveToFile()
+Food* FoodList::getHead()
 {
-    ofstream file("data/food.txt");
-
-    if (!file)
-    {
-        cout << "Unable to open food file." << endl;
-        return;
-    }
-
-    Food* temp = head;
-
-    while (temp != nullptr)
-    {
-        file << temp->id << " "
-             << temp->name << " "
-             << temp->category << " "
-             << temp->price << " "
-             << temp->available << endl;
-
-        temp = temp->next;
-    }
-
-    file.close();
-}
-
-void FoodList::loadFromFile()
-{
-    ifstream file("data/food.txt");
-
-    if (!file)
-    {
-        return;
-    }
-
-    int id;
-    string name;
-    string category;
-    float price;
-    int available;
-
-    while (file >> id >> name >> category >> price >> available)
-    {
-        Food* newFood = new Food(id, name, category, price);
-        newFood->available = available;
-
-        if (head == nullptr)
-        {
-            head = newFood;
-        }
-        else
-        {
-            Food* temp = head;
-
-            while (temp->next != nullptr)
-            {
-                temp = temp->next;
-            }
-
-            temp->next = newFood;
-        }
-    }
-
-    file.close();
+    return head;
 }
